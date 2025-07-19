@@ -1,144 +1,68 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# NAMYDEV UDP-Custom Installer
+# https://github.com/namydeveloper/UDP-Custom
+#
 
-# Run as root
-[[ "$(whoami)" != "root" ]] && {
-    echo -e "\033[1;33m[\033[1;31mErro\033[1;33m] \033[1;37m- \033[1;33myou need to run as root\033[0m"
-    rm /home/ubuntu/install.sh &>/dev/null
-    exit 0
-}
+set -e
 
-#=== setup ===
-cd 
-rm -rf /root/udp
-mkdir -p /root/udp
-rm -rf /etc/UDPCustom
-mkdir -p /etc/UDPCustom
-sudo touch /etc/UDPCustom/udp-custom
-udp_dir='/etc/UDPCustom'
-udp_file='/etc/UDPCustom/udp-custom'
+clear
+echo "=============================================="
+echo "     🔰 NAMYDEV UDP-CUSTOM INSTALLER 🔰"
+echo "=============================================="
+echo ""
 
-sudo apt update -y
-sudo apt upgrade -y
-sudo apt install -y wget
-sudo apt install -y curl
-sudo apt install -y dos2unix
-sudo apt install -y neofetch
-sudo apt install -y cron
-
-source <(curl -sSL 'https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/module/module')
-
-time_reboot() {
-  print_center -ama "${a92:-System/Server Reboot In} $1 ${a93:-Seconds}"
-  REBOOT_TIMEOUT="$1"
-
-  while [ $REBOOT_TIMEOUT -gt 0 ]; do
-    print_center -ne "-$REBOOT_TIMEOUT-\r"
-    sleep 1
-    : $((REBOOT_TIMEOUT--))
-  done
-  rm /home/ubuntu/install.sh &>/dev/null
-  rm /root/install.sh &>/dev/null
-  echo -e "\033[01;31m\033[1;33m More Updates, Follow Us On \033[1;31m(\033[1;36mTelegram\033[1;31m): \033[1;37m@Namydev\033[0m"
-  reboot
-}
-
-# Check Ubuntu version
-if [ "$(lsb_release -rs)" = "8*|9*|10*|11*|16.04*|18.04*" ]; then
-  clear
-  print_center -ama -e "\e[1m\e[31m=====================================================\e[0m"
-  print_center -ama -e "\e[1m\e[33m${a94:-Skrip ini tidak kompatibel dengan sistem operasi Anda}\e[0m"
-  print_center -ama -e "\e[1m\e[33m ${a95:-Gunakan Ubuntu 20 atau lebih tinggi}\e[0m"
-  print_center -ama -e "\e[1m\e[31m=====================================================\e[0m"
-  rm /home/ubuntu/install.sh
-  exit 1
+# Cek versi Ubuntu dengan benar
+if lsb_release -rs | grep -Eq '^(8|9|10|11|16\.04|18\.04)'; then
+  apt-get update
+  apt-get install -y curl wget screen iptables
 else
-  clear
-  echo ""
-  print_center -ama "OS/Lingkungan yang Kompatibel Ditemukan"
-  print_center -ama " ⇢ Instalasi dimulai...! <"
-  sleep 3
+  echo " ⇢ Mengatur zona waktu ke Asia/Jakarta"
+  ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
 
-    # [change timezone to UTC +0]
-  echo ""
-  echo " ⇢ Change timezone to UTC +0"
-  echo " ⇢ for Jakarta/Palangka-Raya [GH] GMT +7:00"
-  ln -fs /usr/share/zoneinfo/Jakarta/Palangka-Raya /etc/localtime
-  sleep 3
+  echo " ⇢ Update & Install dependencies..."
+  apt update -y
+  apt install -y curl wget screen iptables iproute2
 
-  # [+clean up+]
-  rm -rf $udp_file &>/dev/null
-  rm -rf /etc/UDPCustom/udp-custom &>/dev/null
-  # rm -rf /usr/bin/udp-request &>/dev/null
-  rm -rf /etc/limiter.sh &>/dev/null
-  rm -rf /etc/UDPCustom/limiter.sh &>/dev/null
-   rm -rf /etc/cek.sh &>/dev/null
-  rm -rf /etc/UDPCustom/cek.sh &>/dev/null
-  rm -rf /etc/UDPCustom/module &>/dev/null
-  rm -rf /usr/bin/udp &>/dev/null
-  rm -rf /etc/UDPCustom/udpgw.service &>/dev/null
-  rm -rf /etc/udpgw.service &>/dev/null
-  systemctl stop udpgw &>/dev/null
-  systemctl stop udp-custom &>/dev/null
-  # systemctl stop udp-request &>/dev/null
+  echo " ⇢ Menghapus layanan bawaan"
+  systemctl stop udp-custom.service 2>/dev/null || true
+  systemctl disable udp-custom.service 2>/dev/null || true
+  rm -f /etc/systemd/system/udp-custom.service
 
- # [+get files ⇣⇣⇣+]
-  source <(curl -sSL 'https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/module/module') &>/dev/null
-  wget -O /etc/UDPCustom/module 'https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/module/module' &>/dev/null
-  chmod +x /etc/UDPCustom/module
+  echo " ⇢ Download module utama..."
+  source <(curl -sSL 'https://raw.githubusercontent.com/namydeveloper/UDP-Custom/main/module/module')
 
-  wget "https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/bin/udp-custom-linux-amd64" -O /root/udp/udp-custom &>/dev/null
-  # wget "https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/bin/udp-request-linux-amd64" -O /usr/bin/udp-request &>/dev/null
-  chmod +x /root/udp/udp-custom
-  # chmod +x /usr/bin/udp-request
+  echo " ⇢ Download file konfigurasi awal..."
+  mkdir -p /root/udp
+  wget -qO /root/udp/config.json "https://raw.githubusercontent.com/namydeveloper/UDP-Custom/main/config/config.json"
 
-  wget -O /etc/limiter.sh 'https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/module/limiter.sh'
-  cp /etc/limiter.sh /etc/UDPCustom
-  chmod +x /etc/limiter.sh
-  chmod +x /etc/UDPCustom
+  echo " ⇢ Download file utama script UDP..."
+  wget -qO /usr/local/bin/udp "https://raw.githubusercontent.com/namydeveloper/UDP-Custom/main/udp.sh"
+  chmod +x /usr/local/bin/udp
 
-    wget -O /etc/cek.sh 'https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/module/cek.sh'
-  cp /etc/cek.sh /etc/UDPCustom
-  chmod +x /etc/cek.sh
-  chmod +x /etc/UDPCustom
-  
-  # [+udpgw+]
-  wget -O /etc/udpgw 'https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/module/udpgw'
-  mv /etc/udpgw /bin
-  chmod +x /bin/udpgw
-
-  # [+service+]
-  wget -O /etc/udpgw.service 'https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/config/udpgw.service'
-  wget -O /etc/udp-custom.service 'https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/config/udp-custom.service'
-  
-  mv /etc/udpgw.service /etc/systemd/system
-  mv /etc/udp-custom.service /etc/systemd/system
-
-  chmod 640 /etc/systemd/system/udpgw.service
-  chmod 640 /etc/systemd/system/udp-custom.service
-  
-  systemctl daemon-reload &>/dev/null
-  systemctl enable udpgw &>/dev/null
-  systemctl start udpgw &>/dev/null
-  systemctl enable udp-custom &>/dev/null
-  systemctl start udp-custom &>/dev/null
-
-  # [+config+]
-  wget "https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/config/config.json" -O /root/udp/config.json &>/dev/null
-  chmod +x /root/udp/config.json
-
-  # [+menu+]
-  wget -O /usr/bin/udp 'https://raw.githubusercontent.com/Ahmaddevx/UDP-Custom/main/module/udp'
-  chmod +x /usr/bin/udp
-  ufw disable &>/dev/null
-  sudo apt-get remove --purge ufw firewalld -y
-  apt remove netfilter-persistent -y
-  clear
-  echo ""
-  echo ""
-  print_center -ama "${a103:-setting up, please wait...}"
-  sleep 3
-  title "${a102:-Installation Successful}"
-  print_center -ama "${a103:-  To show menu type: \nudp\n}"
-  msg -bar
-  
+  echo " ⇢ Download & install hysteria binary..."
+  curl -sLo /usr/local/bin/hysteria https://github.com/apernet/hysteria/releases/latest/download/hysteria-linux-amd64
+  chmod +x /usr/local/bin/hysteria
 fi
+
+# Fungsi untuk memblokir user duplikat (dengan IP sama)
+check_and_block_users() {
+  echo "⇢ Mengecek IP duplikat dan memblokir..."
+  users=$(who | grep -oP '\(\K[^\)]+' | sort | uniq -c | awk '$1 > 1 {print $2}')
+  for ip in $users; do
+    iptables -A INPUT -s "$ip" -j DROP
+  done
+}
+
+# Jalankan blokir
+check_and_block_users
+
+# Hapus script installer setelah selesai
+rm -f /home/ubuntu/install.sh 2>/dev/null || true
+
+# Output informasi sukses
+echo ""
+echo -e "✅ \033[1;32mUDP-Custom berhasil diinstal!\033[0m"
+echo -e "📦 Jalankan menu: \033[1;36mudp\033[0m"
+echo -e "📢 Telegram Support: \033[1;36m@Namydev\033[0m"
+echo ""
